@@ -10,8 +10,23 @@
 library(shiny)
 library(leaflet)
 
-#setting the workdir
-setwd("D:/mrdasilva/Desktop/Coursera/MDULO9~1")
+URL1      <- "https://raw.github.com/plancknet/Developing_Data_Products/master/DistRoyal.csv"
+destfile_DistRoyal <- "DistRoyal.csv"
+
+URL2      <- "https://raw.github.com/plancknet/Developing_Data_Products/master/Municipios_Brasileiros.csv"
+destfile_Municipios <- "Municipios_Brasileiros.csv"
+
+if(!file.exists(destfile_DistRoyal)){
+  download.file(URL1, destfile_DistRoyal)
+}
+
+
+if(!file.exists(destfile_Municipios)){
+  download.file(URL2, destfile_Municipios)
+}
+
+distRoyal <- read.csv("DistRoyal.csv")
+LatLong   <- read.csv("Municipios_Brasileiros.csv", sep = ";", fileEncoding = "UTF-8")
 
 #Loading data
 distRoyal <-  read.csv("DistRoyal.csv")
@@ -58,27 +73,39 @@ printCurrency <- function(value, currency.sym="R$", digits=2, sep=".", decimal="
 # Defining UI for application that draws a map
 ui <- fluidPage(
   # Application title
-  titlePanel("Distribuicao de Royalties - Municipios Brasileiros"),
+  titlePanel("Oil Royalties Distribution - Brazilian Cities"),
   
   # Sidebar with a checkboxs input  
   sidebarLayout(
     sidebarPanel(
-      checkboxGroupInput("uf", "Selecione os Estados:", 
+      checkboxGroupInput("uf", "Select States:", 
                          choiceNames = UFs, 
                          choiceValues = UFs, 
-                         selected = NULL), 
-      actionLink("selectall","Selecionar todos")
+                         selected = NULL, inline = TRUE), 
+      actionLink("selectall","Select All"), 
+      h3(), h5("Documentation"), 
+      h6("This application exibs the oil royalties distribution among brazilian cities between 2010 and 2017.
+"),
+      h6("Selecting the states, the map will focus in the region and will display circles that represents the location of the cities. If you desire see all data set, click in select all.
+"),
+      h6("The circle size represents the amount of money that city received in this year. Clicking on the circle you will see the details.
+"), 
+      h6("The map is interactive and you can apply zoom in and zoom out
+"), 
+      h6("Clicking on the play button will be showed the evolution between years.
+"),
+      h6("Selecting the Table tab the data will be showed in table format.")
       
       
-    ),
+    ), 
     
     # Show map and data table 
     mainPanel(
-        tabsetPanel(
-        tabPanel("Mapa", leafletOutput("map")), 
-        tabPanel("Tabela", tableOutput('table'))
+      tabsetPanel(
+        tabPanel("Map", leafletOutput("map")), 
+        tabPanel("Table", tableOutput('table'))
       ),
-      sliderInput("ano", "Ano", 
+      sliderInput("ano", "Year", 
                   min = as.integer(min(ANOs)), 
                   max = as.integer(max(ANOs)), 
                   step = 1, 
@@ -88,66 +115,66 @@ ui <- fluidPage(
                                              pauseButton = icon('pause', "fa-3x")))
     )
   )
-
+  
 )
 
 # Defining server logic required to draw a map and data table
 server <- function(input, output, session) {
-   
-   output$map <- renderLeaflet({
-
-     df <- data.frame(lat    = total$Latitude, 
-                      lng    = total$Longitude,
-                      ano    = total$NUM_ANO,
-                      cidade = total$NOM_MUNICIPIO.x, 
-                      uf     = total$UF, 
-                      valor  = total$VAL_DISTRIBUIDO)
-     
-     df2 <- subset(df, df$uf %in% input$uf)
-     
-     df2 <- subset(df2, as.integer(sub(",", "", df2$ano)) == as.integer(input$ano))
-     
-     df2 %>% leaflet() %>%
-       addTiles() %>%
-       addCircles(radius = (df2$valor)/10000,  
-                  color = ~pal(as.integer(df2$valor)), 
-                  popup = paste(df2$uf, " - ", df2$cidade, "<br>", printCurrency(df2$valor)))
-     
-
-   })
-   
-   output$table <- renderTable({
-     df <- data.frame(lat = total$Latitude, 
-                      lng = total$Longitude, 
-                      ano = total$NUM_ANO,
-                      cidade = total$NOM_MUNICIPIO.x, 
-                      uf = total$UF, 
-                      valor = printCurrency(total$VAL_DISTRIBUIDO))
-     
-     df2 <- subset(df[,3:6], df$uf %in% input$uf)
-     
-     df2 <- subset(df2, as.integer(sub(",", "", df2$ano)) == as.integer(input$ano))
-     
-   })
-   
-   observe({
-     if(input$selectall == 0) return(NULL) 
-     else if (input$selectall%%2 == 0)
-     {
-       updateCheckboxGroupInput(session,"uf", "Selecione os Estados:", 
-                                choiceNames = UFs, 
-                                choiceValues = UFs)
-     }
-     else
-     {
-       updateCheckboxGroupInput(session,"uf", "Selecione os Estados:", 
-                                choiceNames = UFs, 
-                                choiceValues = UFs, 
-                                selected = UFs)
-     }
-     
-   })
-   
+  
+  output$map <- renderLeaflet({
+    
+    df <- data.frame(lat    = total$Latitude, 
+                     lng    = total$Longitude,
+                     ano    = total$NUM_ANO,
+                     cidade = total$NOM_MUNICIPIO.x, 
+                     uf     = total$UF, 
+                     valor  = total$VAL_DISTRIBUIDO)
+    
+    df2 <- subset(df, df$uf %in% input$uf)
+    
+    df2 <- subset(df2, as.integer(sub(",", "", df2$ano)) == as.integer(input$ano))
+    
+    df2 %>% leaflet() %>%
+      addTiles() %>%
+      addCircles(radius = (df2$valor)/10000,  
+                 color = ~pal(as.integer(df2$valor)), 
+                 popup = paste(df2$uf, " - ", df2$cidade, "<br>", printCurrency(df2$valor)))
+    
+    
+  })
+  
+  output$table <- renderTable({
+    df <- data.frame(lat = total$Latitude, 
+                     lng = total$Longitude, 
+                     ano = total$NUM_ANO,
+                     cidade = total$NOM_MUNICIPIO.x, 
+                     uf = total$UF, 
+                     valor = printCurrency(total$VAL_DISTRIBUIDO))
+    
+    df2 <- subset(df[,3:6], df$uf %in% input$uf)
+    
+    df2 <- subset(df2, as.integer(sub(",", "", df2$ano)) == as.integer(input$ano))
+    
+  })
+  
+  observe({
+    if(input$selectall == 0) return(NULL) 
+    else if (input$selectall%%2 == 0)
+    {
+      updateCheckboxGroupInput(session,"uf", "Select States:", 
+                               choiceNames = UFs, 
+                               choiceValues = UFs, inline = TRUE)
+    }
+    else
+    {
+      updateCheckboxGroupInput(session,"uf", "Select States:", 
+                               choiceNames = UFs, 
+                               choiceValues = UFs, 
+                               selected = UFs, inline = TRUE)
+    }
+    
+  })
+  
 }
 
 # Run the application 
