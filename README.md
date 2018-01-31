@@ -10,3 +10,6 @@ The map is interactive and you can apply zoom in and zoom out
 Clicking on the play button will be showed the evolution between years.
 
 Selecting the Table tab the data will be showed in table format.
+
+Click on the link below to access the app:
+<https://plancknet.shinyapps.io/DistRoyal/>
